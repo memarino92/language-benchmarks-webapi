@@ -59,5 +59,5 @@ FROM python:3.11-slim AS charts
 WORKDIR /charts
 COPY results/raw ./results/raw
 COPY scripts/generate_webapi_charts.py ./scripts/generate_webapi_charts.py
-RUN pip install matplotlib
+RUN pip install matplotlib seaborn
 ENTRYPOINT ["python3", "./scripts/generate_webapi_charts.py"]
