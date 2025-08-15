@@ -1,0 +1,45 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Node.js
+node_modules/
+*.log
+
+# Go
+*.exe
+*.test
+*.out
+
+# Rust
+target/
+Cargo.lock
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Results
+results/raw/*.json
+results/charts/*.png
+
+# OS/Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Docker
+*.tar
+
+# Misc
+.env
+*.bak
+*.tmp
