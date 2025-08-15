@@ -45,7 +45,13 @@ def pluck_metrics(data):
     # p99 can be directly on latency or inside latency.percentiles["99"]
     if isinstance(lat.get("p99", None), (int, float)):
       p99 = float(lat["p99"])
-    else:
+    p99_val = lat.get("p99", None)
+    if p99_val is not None:
+      try:
+        p99 = float(p99_val)
+      except (TypeError, ValueError):
+        pass
+    if p99 is None:
       pcts = lat.get("percentiles", {})
       # keys in JSON are strings, but be defensive
       if isinstance(pcts.get("99", None), (int, float)):
