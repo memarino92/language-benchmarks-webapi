@@ -15,28 +15,41 @@ def pluck_metrics(data):
   try:
     r = data.get("result", {})
     rps = r.get("rps", {}).get("mean", rps)
-    mean = r.get("latency", {}).get("mean", mean)
-    p99 = r.get("latency", {}).get("p99", p99)
+    lat = r.get("latency", {})
+    mean = lat.get("mean", mean)
+    # p99 can be directly on latency or inside latency.percentiles["99"]
+    if isinstance(lat.get("p99", None), (int, float)):
+      p99 = float(lat["p99"])
+    else:
+      pcts = lat.get("percentiles", {})
+      # keys in JSON are strings, but be defensive
+      if isinstance(pcts.get("99", None), (int, float)):
+        p99 = float(pcts["99"])
+      elif isinstance(pcts.get(99, None), (int, float)):
+        p99 = float(pcts[99])
   except Exception:
     pass
   # Fallback recursive search
-  def walk(o):
+  def walk(o, path=""):
     nonlocal rps, mean, p99
     if isinstance(o, dict):
       for k, v in o.items():
         lk = k.lower()
+        new_path = f"{path}.{lk}" if path else lk
         if rps is None and "rps" in lk and isinstance(v, (int, float)):
           rps = float(v)
         if isinstance(v, (int, float)):
-          if mean is None and ("mean" in lk or "avg" in lk) and "lat" in lk:
+          # mean if key mentions mean/avg and appears under a latency-like path
+          if mean is None and ("mean" in lk or "avg" in lk) and ("lat" in new_path):
             mean = float(v)
-          if p99 is None and ("p99" in lk or "99" == lk) and "lat" in lk:
+          # p99 if key is p99 or 99 and path mentions latency or percentiles
+          if p99 is None and (("p99" in lk) or lk in ("99",)) and ("lat" in new_path or "percentile" in new_path):
             p99 = float(v)
         else:
-          walk(v)
+          walk(v, new_path)
     elif isinstance(o, list):
       for item in o:
-        walk(item)
+        walk(item, path)
   walk(data)
   return rps or 0.0, mean or 0.0, p99 or 0.0
 
