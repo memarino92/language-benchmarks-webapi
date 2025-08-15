@@ -74,7 +74,7 @@ def pluck_metrics(data):
           if mean is None and ("mean" in lk or "avg" in lk) and ("lat" in new_path):
             mean = float(v)
           # p99 if key is p99 or 99 and path mentions latency or percentiles
-          if p99 is None and (("p99" in lk) or lk in ("99",)) and ("lat" in new_path or "percentile" in new_path):
+          if p99 is None and (("p99" in lk) or lk in ("99",)) and ("lat" in new_path or "percentiles" in new_path):
             p99 = float(v)
         else:
           walk(v, new_path)
