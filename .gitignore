@@ -27,6 +27,7 @@ __pycache__/
 
 # Results
 results/raw/*.json
+results/raw/*.csv
 results/charts/*.png
 
 # OS/Editor

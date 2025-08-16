@@ -38,11 +38,25 @@ function Bench($name, $url, $out) {
     }
     catch {}
     Write-Host ">>> $name benchmark"
+    $statsFile = "results/raw/$name-resource.csv"
+    $containerId = docker ps -qf "name=$name"
+    # Start docker stats in the background, outputting CSV every second
+    $statsJob = Start-Job -ScriptBlock {
+        param($cid, $file)
+        while ($true) {
+            docker stats $cid --no-stream --format '"{{.Container}}","{{.CPUPerc}}","{{.MemUsage}}","{{.NetIO}}","{{.BlockIO}}","{{.PIDs}}"' | Out-File -Encoding utf8 -Append $file
+            Start-Sleep -Seconds 1
+        }
+    } -ArgumentList $containerId, $statsFile
     try {
         docker run --rm --network webbench-net webbench-loadgen -c 256 -d 15s -l -o json $url | Select-Object -Last 1 | Out-File -Encoding utf8 $out
     }
     catch {}
-    Write-Host "Saved $out"
+    # Stop the stats job
+    Stop-Job $statsJob | Out-Null
+    Wait-Job $statsJob | Out-Null
+    Remove-Job $statsJob | Out-Null
+    Write-Host "Saved $out and $statsFile"
 }
 
 Bench 'dotnet-jit' 'http://dotnet-jit:8080/json' 'results/raw/dotnet-jit.json'

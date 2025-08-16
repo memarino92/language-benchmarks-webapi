@@ -133,4 +133,74 @@ pairs = sorted(zip(labels, p99s), key=lambda x: x[1])
 lbls, vals = [p[0] for p in pairs], [p[1] for p in pairs]
 make_bar(lbls, vals, "p99 latency (ms, lower is better)", "Web API Latency - p99", "webapi_latency_p99.png", yfmt=fmt_int)
 
+
+# --- Resource Usage Charts ---
+import re
+import pandas as pd
+
+def parse_resource_csv(path):
+  # Each line: "container","cpu%","memusage / limit","netio","blockio","pids"
+  rows = []
+  with open(path, encoding="utf-8") as f:
+    for line in f:
+      parts = [p.strip(' "') for p in line.strip().split(',')]
+      if len(parts) < 6 or not re.match(r'^[\d\w\-_]+$', parts[0]):
+        continue
+      cpu = float(parts[1].replace('%','').replace(',','.'))
+      mem = parts[2].split('/')[0].strip()
+      # Convert mem to MB, supporting MiB, GiB, KiB, MB, GB, KB
+      mem_mb = 0
+      try:
+        if mem.lower().endswith('mib'):
+          mem_mb = float(mem[:-3].strip())
+        elif mem.lower().endswith('gib'):
+          mem_mb = float(mem[:-3].strip()) * 1024
+        elif mem.lower().endswith('kib'):
+          mem_mb = float(mem[:-3].strip()) / 1024
+        elif mem.lower().endswith('mb'):
+          mem_mb = float(mem[:-2].strip())
+        elif mem.lower().endswith('gb'):
+          mem_mb = float(mem[:-2].strip()) * 1024
+        elif mem.lower().endswith('kb'):
+          mem_mb = float(mem[:-2].strip()) / 1024
+        else:
+          mem_mb = float(mem)
+      except Exception:
+        mem_mb = 0
+      rows.append({"cpu": cpu, "mem_mb": mem_mb})
+  return pd.DataFrame(rows)
+
+resource_files = sorted(glob.glob(os.path.join(RAW, "*-resource.csv")))
+resource_data = {}
+for fp in resource_files:
+  name = os.path.basename(fp).replace("-resource.csv", "")
+  df = parse_resource_csv(fp)
+  if not df.empty:
+    resource_data[name] = df
+
+if resource_data:
+  # CPU Usage Chart
+  plt.figure(figsize=(10,5))
+  for name, df in resource_data.items():
+    plt.plot(df.index, df["cpu"], label=name, color=PALETTE.get(name, None))
+  plt.xlabel("Time (s)")
+  plt.ylabel("CPU Usage (%)")
+  plt.title("Web API CPU Usage During Benchmark")
+  plt.legend()
+  plt.tight_layout()
+  plt.savefig(os.path.join(OUT, "webapi_cpu_usage.png"), bbox_inches="tight")
+  plt.close()
+
+  # Memory Usage Chart
+  plt.figure(figsize=(10,5))
+  for name, df in resource_data.items():
+    plt.plot(df.index, df["mem_mb"], label=name, color=PALETTE.get(name, None))
+  plt.xlabel("Time (s)")
+  plt.ylabel("Memory Usage (MB)")
+  plt.title("Web API Memory Usage During Benchmark")
+  plt.legend()
+  plt.tight_layout()
+  plt.savefig(os.path.join(OUT, "webapi_memory_usage.png"), bbox_inches="tight")
+  plt.close()
+
 print("Charts saved in", OUT)
